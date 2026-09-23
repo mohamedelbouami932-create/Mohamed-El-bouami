@@ -1,0 +1,6 @@
+{
+  "name": "San Andreas Hub",
+  "description": "Download guide, specs checker, complete cheat codes, mission walkthroughs, and 100% completion tracker for Grand Theft Auto: San Andreas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

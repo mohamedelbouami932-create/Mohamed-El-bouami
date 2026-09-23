@@ -7,8 +7,10 @@ import android.os.Build
 import android.os.Environment
 import android.os.StatFs
 import com.example.data.local.CheatFavoriteDao
+import com.example.data.local.ChecklistDao
 import com.example.data.local.CollectibleProgressDao
 import com.example.data.local.MissionProgressDao
+import com.example.data.local.TerritoryDao
 import com.example.data.local.UserNoteDao
 import com.example.data.model.*
 import kotlinx.coroutines.Dispatchers
@@ -23,7 +25,9 @@ class SanAndreasRepository(
     private val cheatDao: CheatFavoriteDao,
     private val collectibleDao: CollectibleProgressDao,
     private val missionDao: MissionProgressDao,
-    private val noteDao: UserNoteDao
+    private val noteDao: UserNoteDao,
+    private val territoryDao: TerritoryDao,
+    private val checklistDao: ChecklistDao
 ) {
     // ---- DEVICE SPECS & COMPATIBILITY ----
     fun checkDeviceSpecs(): DeviceSpecs {
@@ -119,12 +123,42 @@ class SanAndreasRepository(
         noteDao.deleteNote(note)
     }
 
+    // ---- GANG TERRITORIES (ROOM PERSISTENCE) ----
+    val territoryProgress: Flow<Map<String, Boolean>> = territoryDao.getAllProgress().map { list ->
+        list.associate { it.id to it.isControlled }
+    }
+
+    suspend fun toggleTerritory(id: String, currentState: Boolean) = withContext(Dispatchers.IO) {
+        territoryDao.setProgress(TerritoryProgressEntity(id = id, isControlled = !currentState))
+    }
+
+    suspend fun resetAllTerritories() = withContext(Dispatchers.IO) {
+        territoryDao.resetAll()
+    }
+
+    // ---- 100% CHECKLIST PROGRESS (ROOM PERSISTENCE) ----
+    val checklistProgress: Flow<Map<String, Boolean>> = checklistDao.getAllProgress().map { list ->
+        list.associate { it.id to it.isCompleted }
+    }
+
+    suspend fun toggleChecklistItem(id: String, currentState: Boolean) = withContext(Dispatchers.IO) {
+        checklistDao.setProgress(ChecklistProgressEntity(id = id, isCompleted = !currentState))
+    }
+
+    suspend fun resetAllChecklist() = withContext(Dispatchers.IO) {
+        checklistDao.resetAll()
+    }
+
     // ---- STATIC COMPENDIUM & GAME DATA ----
     fun getCheats(): List<CheatCode> = CHEAT_DATABASE
 
     fun getCollectibles(): List<CollectibleItem> = COLLECTIBLE_DATABASE
 
     fun getMissions(): List<MissionItem> = MISSION_DATABASE
+
+    fun getTerritories(): List<TerritoryItem> = TERRITORY_DATABASE
+
+    fun getChecklistItems(): List<GenericChecklistItem> = CHECKLIST_DATABASE
 
     fun getVehicles(): List<VehicleInfo> = VEHICLE_DATABASE
 
@@ -541,6 +575,392 @@ class SanAndreasRepository(
                 "Mary-Beth Maybell",
                 listOf("Willie Nelson - Crazy", "Patsy Cline - Three Cigarettes in an Ashtray", "Conway Twitty - Louisiana Woman", "Juice Newton - Queen of Hearts"),
                 "Country heartache and honky-tonk ballads broadcasting from Bone County."
+            )
+        )
+
+        private val TERRITORY_DATABASE = listOf(
+            TerritoryItem(
+                id = "terr_ganton",
+                name = "Ganton",
+                district = "South Central LS",
+                originalGang = GangType.GROVE_STREET,
+                waveDifficulty = "Low (Pistol & Spray Can)",
+                weaponSpawns = "Tec-9 on Sweet's roof, Pistol behind CJ's house",
+                tacticTip = "CJ's home block and cul-de-sac. Wave 1 usually spawns under the railway bridge. Climb Sweet's house roof for high-ground vantage."
+            ),
+            TerritoryItem(
+                id = "terr_idlewood",
+                name = "Idlewood",
+                district = "East Los Santos",
+                originalGang = GangType.BALLAS,
+                waveDifficulty = "High (Micro SMG & Molotovs)",
+                weaponSpawns = "Shotgun at gas station, Armor in motel alley",
+                tacticTip = "Dense Ballas stronghold around the barber shop and gas station. Stand on top of the car wash or motel canopy to avoid getting encircled."
+            ),
+            TerritoryItem(
+                id = "terr_east_ls",
+                name = "East Los Santos",
+                district = "East Los Santos",
+                originalGang = GangType.BALLAS,
+                waveDifficulty = "High (AK-47 & SMG)",
+                weaponSpawns = "Brass knuckles, AK-47 behind pig pen",
+                tacticTip = "Narrow residential alleys between houses. Keep your back to brick walls and use grenades or Combat Shotgun against clustered waves."
+            ),
+            TerritoryItem(
+                id = "terr_glen_park",
+                name = "Glen Park",
+                district = "North East LS",
+                originalGang = GangType.BALLAS,
+                waveDifficulty = "High (SMG & Micro SMG)",
+                weaponSpawns = "Sniper on hospital roof, Armor by bridge",
+                tacticTip = "Kilo Tray Ballas territory centered around the pond. Run to the center bridge or park gazebo to bottleneck attackers from across the water."
+            ),
+            TerritoryItem(
+                id = "terr_jefferson",
+                name = "Jefferson",
+                district = "North East LS",
+                originalGang = GangType.BALLAS,
+                waveDifficulty = "High (AK-47 & SMG)",
+                weaponSpawns = "MP5 near hospital, Health in church grounds",
+                tacticTip = "High Ballas density near the Jefferson Motel and church. Use the pedestrian overpass or hospital stairwell to pick off Ballas cleanly."
+            ),
+            TerritoryItem(
+                id = "terr_willowfield",
+                name = "Willowfield",
+                district = "South East LS",
+                originalGang = GangType.BALLAS,
+                waveDifficulty = "Medium (Micro SMG & 9mm)",
+                weaponSpawns = "Sawn-off shotgun in rail yard, Armor behind warehouse",
+                tacticTip = "Rollin' Heights Ballas turf in the industrial railway yards. Keep moving along rail tracks so enemies don't spawn right behind you."
+            ),
+            TerritoryItem(
+                id = "terr_playa_del_seville",
+                name = "Playa del Seville",
+                district = "South East LS",
+                originalGang = GangType.BALLAS,
+                waveDifficulty = "Medium (Pistol & SMG)",
+                weaponSpawns = "Molotovs behind apartments, Health on courts",
+                tacticTip = "Seville cul-de-sac on the southern ocean front. Basketball court fencing provides effective line-of-sight cover against incoming waves."
+            ),
+            TerritoryItem(
+                id = "terr_corona",
+                name = "El Corona",
+                district = "South Central LS",
+                originalGang = GangType.LOS_SANTOS_VAGOS,
+                waveDifficulty = "High (AK-47 & Micro SMG)",
+                weaponSpawns = "Armor near railway track, Micro SMG in Cesar's alley",
+                tacticTip = "Cesar Vialpando's home turf. Vagos spawn in large squads along the railroad tracks. Long-range M4 rifle shreds them before they close in."
+            ),
+            TerritoryItem(
+                id = "terr_little_mexico",
+                name = "Little Mexico",
+                district = "Downtown / South LS",
+                originalGang = GangType.LOS_SANTOS_VAGOS,
+                waveDifficulty = "Medium (Micro SMG & Pistol)",
+                weaponSpawns = "Combat Shotgun on tram platform, Health at diner",
+                tacticTip = "Dense urban grid corner. Climb the pedestrian ramp or light rail platform to fire down at Vagos without risking explosive car chain reactions."
+            ),
+            TerritoryItem(
+                id = "terr_los_flores",
+                name = "Los Flores",
+                district = "North East LS",
+                originalGang = GangType.LOS_SANTOS_VAGOS,
+                waveDifficulty = "Medium (Micro SMG & Shotgun)",
+                weaponSpawns = "Grenades in hill alley, Armor on slope",
+                tacticTip = "Extremely steep hillside stairs and houses. Control the summit street so enemies must sprint uphill directly into your crosshairs."
+            ),
+            TerritoryItem(
+                id = "terr_las_colinas",
+                name = "Las Colinas",
+                district = "North East LS",
+                originalGang = GangType.LOS_SANTOS_VAGOS,
+                waveDifficulty = "High (AK-47 & SMG)",
+                weaponSpawns = "AK-47 behind wooden shacks, Armor at hilltop",
+                tacticTip = "Northern Vagos stronghold. Narrow wooden staircases and sharp corners. Toss satchel charges or use rocket launchers at corner choke points."
+            ),
+            TerritoryItem(
+                id = "terr_ocean_docks",
+                name = "Ocean Docks",
+                district = "South East LS",
+                originalGang = GangType.BALLAS,
+                waveDifficulty = "Medium (SMG & 9mm)",
+                weaponSpawns = "M4 inside warehouse crate, Armor on barge",
+                tacticTip = "Sprawling shipping container maze. Ambush Ballas from atop stacked cargo shipping containers with a sniper rifle."
+            ),
+            TerritoryItem(
+                id = "terr_temple",
+                name = "Temple",
+                district = "North West LS",
+                originalGang = GangType.BALLAS,
+                waveDifficulty = "Low (Pistols)",
+                weaponSpawns = "Health at drive-thru, Pistol in alley",
+                tacticTip = "Ballas fringe on the border of Vinewood. Easy territory to trigger with 3 quick, low-threat waves."
+            ),
+            TerritoryItem(
+                id = "terr_verona_beach",
+                name = "Verona Beach",
+                district = "South West LS",
+                originalGang = GangType.BALLAS,
+                waveDifficulty = "Medium (Shotgun & Pistol)",
+                weaponSpawns = "Katana on bridge, Armor at gym booth",
+                tacticTip = "Open boardwalk and beach sand. Keep clear sightlines with an M4 or Combat Shotgun so Ballas have zero cover."
+            ),
+            TerritoryItem(
+                id = "terr_commerce",
+                name = "Commerce / Pershing",
+                district = "Downtown LS",
+                originalGang = GangType.BALLAS,
+                waveDifficulty = "Low (Pistol & Bat)",
+                weaponSpawns = "Armor in police underground, Health at fountain",
+                tacticTip = "Civic plaza borders. Stand in the central civic plaza where wide fountains give full 360-degree vision of advancing enemies."
+            )
+        )
+
+        private val CHECKLIST_DATABASE = listOf(
+            // R3 & Vehicle Sub-Missions
+            GenericChecklistItem(
+                id = "job_firefighter",
+                category = ChecklistCategory.VEHICLE_JOBS,
+                title = "Firefighter Sub-Mission",
+                subtitle = "Complete Level 12 in Fire Truck",
+                requirement = "Extinguish burning vehicles and occupants across 12 consecutive levels without abandoning the truck.",
+                rewardUnlocked = "CJ becomes permanently 100% Fireproof (immune to fire, flames, and Molotovs) + $45,000 cash.",
+                location = "Start in quiet towns like Angel Pine or Montgomery for very short travel distances.",
+                proTip = "Do this in Angel Pine! The entire town is tiny, meaning fires spawn within 20 seconds of each other."
+            ),
+            GenericChecklistItem(
+                id = "job_paramedic",
+                category = ChecklistCategory.VEHICLE_JOBS,
+                title = "Paramedic Sub-Mission",
+                subtitle = "Complete Level 12 in Ambulance",
+                requirement = "Rescue and transport 78 patients to the hospital across 12 consecutive levels. Ambulance holds max 3 patients.",
+                rewardUnlocked = "CJ's Maximum Health permanently increased to 150% + $5,000 cash.",
+                location = "Angel Pine Medical Center in Whetstone County.",
+                proTip = "Never do this in Los Santos or San Fierro! In Angel Pine, all patients spawn on the exact same 3 streets."
+            ),
+            GenericChecklistItem(
+                id = "job_vigilante",
+                category = ChecklistCategory.VEHICLE_JOBS,
+                title = "Vigilante Sub-Mission",
+                subtitle = "Complete Level 12 in Police/Military Vehicle",
+                requirement = "Hunt down and eliminate fleeing criminal vehicles across 12 consecutive waves.",
+                rewardUnlocked = "CJ's Maximum Body Armor permanently increased to 150% + Cash reward.",
+                location = "Anywhere in San Andreas with Police Cruiser, HPV-1000 motorcycle, Hunter helicopter, or Rhino Tank.",
+                proTip = "Use the Rhino Tank (steal from Area 69 or spawn) or Hunter attack helicopter with forward rockets."
+            ),
+            GenericChecklistItem(
+                id = "job_taxi",
+                category = ChecklistCategory.VEHICLE_JOBS,
+                title = "Taxi Driver Sub-Mission",
+                subtitle = "Deliver 50 Taxi Fares Total",
+                requirement = "Drop off 50 passengers in any Taxi or Cabbie (does NOT have to be consecutive).",
+                rewardUnlocked = "All spawned Taxis and Cabbies permanently receive Nitrous Oxide boosts and Hydraulics.",
+                location = "Los Santos, San Fierro, or Las Venturas streets.",
+                proTip = "Split into 5 shifts of 10 fares. Keep speed steady to prevent passengers jumping out."
+            ),
+            GenericChecklistItem(
+                id = "job_pimping",
+                category = ChecklistCategory.VEHICLE_JOBS,
+                title = "Pimping Sub-Mission",
+                subtitle = "Complete Level 10 in Broadway",
+                requirement = "Drive two working girls to clients in a Broadway convertible and discipline unruly customers.",
+                rewardUnlocked = "Prostitutes pay CJ money instead of taking payment + Cash rewards.",
+                location = "Broadway convertible spawns parked beside the car wash in Idlewood, Los Santos.",
+                proTip = "Equip Micro SMG for drive-by shooting when clients refuse to pay or attack the girls."
+            ),
+            GenericChecklistItem(
+                id = "job_freight",
+                category = ChecklistCategory.VEHICLE_JOBS,
+                title = "Freight Train Sub-Mission",
+                subtitle = "Complete Level 2 in Brown Streak Train",
+                requirement = "Pilot the freight train to deliver cargo to all 5 stations across San Andreas twice on time.",
+                rewardUnlocked = "$50,000 Cash reward + Free unlimited train travel throughout San Andreas.",
+                location = "Train tracks in Market Station (Los Santos), Cranberry Station (San Fierro), or Linden Station (Las Venturas).",
+                proTip = "Do not exceed 47 MPH on sharp bends or the locomotive will derail. Brake well ahead of stations."
+            ),
+            GenericChecklistItem(
+                id = "job_courier_ls",
+                category = ChecklistCategory.VEHICLE_JOBS,
+                title = "Roboi's Food Mart Courier",
+                subtitle = "Complete 4 Delivery Stages on BMX",
+                requirement = "Throw food packages through glowing halos across Los Santos on a BMX bike.",
+                rewardUnlocked = "Roboi's Food Mart becomes a profitable cash asset generating up to $2,000/day.",
+                location = "Commerce, Los Santos (parked outside Roboi's Food Mart).",
+                proTip = "Hop the BMX onto pedestrian walkways to dodge traffic. Practice drive-by toss timing."
+            ),
+            GenericChecklistItem(
+                id = "job_courier_sf",
+                category = ChecklistCategory.VEHICLE_JOBS,
+                title = "Hippy Shopper Courier",
+                subtitle = "Complete 4 Delivery Stages on Freeway",
+                requirement = "Toss packages onto doorsteps in San Fierro on a Freeway chopper motorcycle.",
+                rewardUnlocked = "Hippy Shopper becomes a profitable cash asset generating up to $2,000/day.",
+                location = "Queens, San Fierro (beside the Hippy Shopper store).",
+                proTip = "Careful on steep San Fierro hills. Approach halos downhill to maintain motorcycle balance."
+            ),
+            GenericChecklistItem(
+                id = "job_courier_lv",
+                category = ChecklistCategory.VEHICLE_JOBS,
+                title = "Burger Shot Courier",
+                subtitle = "Complete 4 Delivery Stages on Faggio",
+                requirement = "Deliver burger bags across Las Venturas on a Faggio scooter.",
+                rewardUnlocked = "Burger Shot becomes a profitable cash asset generating up to $2,000/day.",
+                location = "Redsands East, Las Venturas (beside Burger Shot).",
+                proTip = "Faggio is slow but has high maneuverability. Cut through casino alleyways to beat the timer."
+            ),
+
+            // Schools & Stadiums
+            GenericChecklistItem(
+                id = "school_driving",
+                category = ChecklistCategory.SCHOOLS_CHALLENGES,
+                title = "Driving School (Back to School)",
+                subtitle = "Pass all 12 Driving Tests (Bronze+)",
+                requirement = "Complete tests: The 360, The 180, Whip and Terminate, Pop and Control, Burn and Lap, Cone Coil, The '90', Wheelie Weave, City Slicking, etc.",
+                rewardUnlocked = "Super GT (Bronze), Bullet (Silver), Hotknife (Gold) spawned outside school + 100% Driving Skill.",
+                location = "Doherty, San Fierro (opposite the garage).",
+                proTip = "On City Slicking, hug the tram tracks to avoid random cross-traffic turning into you."
+            ),
+            GenericChecklistItem(
+                id = "school_flying",
+                category = ChecklistCategory.SCHOOLS_CHALLENGES,
+                title = "Pilot School (Airstrip)",
+                subtitle = "Pass all 10 Flight Tests (Bronze+)",
+                requirement = "Takeoff, Runway Landing, Inverted Flight, Loop the Loop, Barrel Roll, Parachute Target, Helicopter Landings.",
+                rewardUnlocked = "Rustler (Bronze), Stuntplane (Silver), Hunter military chopper (Gold) + Pilot's License for all airports.",
+                location = "Verdant Meadows Abandoned Airstrip, Bone County.",
+                proTip = "Use gentle rudder taps (bumpers) rather than violent rolls when aligning with destination halos."
+            ),
+            GenericChecklistItem(
+                id = "school_boat",
+                category = ChecklistCategory.SCHOOLS_CHALLENGES,
+                title = "Boat School (Basic Seamanship)",
+                subtitle = "Pass all 5 Boating Tests (Bronze+)",
+                requirement = "Plot a Course, Fresh Slalom, Flying Fish, Land Ho, and Under the Radar.",
+                rewardUnlocked = "Marquis (Bronze), Squalo (Silver), Jetmax (Gold) docked at Bayside Marina.",
+                location = "Bayside Marina, Tierra Robada (northwest corner of the map).",
+                proTip = "Turn into the boat wake early to prevent skipping off swells into the rock cliffs."
+            ),
+            GenericChecklistItem(
+                id = "school_bike",
+                category = ChecklistCategory.SCHOOLS_CHALLENGES,
+                title = "Motorcycle School (Bike School)",
+                subtitle = "Pass all 6 Bike Tests (Bronze+)",
+                requirement = "The 360, The 180, The Stopper, The Jump, Stoppie, and Jump & Stoppie.",
+                rewardUnlocked = "Faggio (Bronze), BF-400 (Silver), NRG-500 (Gold) spawned + 100% Bike skill.",
+                location = "Blackfield, Las Venturas (southwest Las Venturas).",
+                proTip = "Lean forward during stoppies and ease off the front brake before the bike tips over."
+            ),
+            GenericChecklistItem(
+                id = "stadium_8track",
+                category = ChecklistCategory.SCHOOLS_CHALLENGES,
+                title = "8-Track Stadium Race",
+                subtitle = "Win 12-Lap Hotring Race at LS Forum",
+                requirement = "Place 1st against 11 AI drivers in high-speed stock cars on a figure-8 dirt oval.",
+                rewardUnlocked = "Hotring Racer & Monster Truck spawned outside stadium + $10,000 cash.",
+                location = "Los Santos Forum, East Beach, Los Santos.",
+                proTip = "Avoid pileups on lap 1. Wait for AI drivers to spin each other out in the center intersection."
+            ),
+            GenericChecklistItem(
+                id = "stadium_bloodring",
+                category = ChecklistCategory.SCHOOLS_CHALLENGES,
+                title = "Bloodring Demolition Derby",
+                subtitle = "Survive 1 Minute at Corvin Stadium",
+                requirement = "Pass through checkpoints to add seconds to your clock until the timer reaches 1:00.",
+                rewardUnlocked = "Bloodring Banger spawned outside Corvin Stadium + $10,000 cash.",
+                location = "Corvin Stadium, Foster Valley, San Fierro.",
+                proTip = "Target checkpoints near perimeter walls and reverse to protect the front engine block from smoking."
+            ),
+            GenericChecklistItem(
+                id = "stadium_dirt_track",
+                category = ChecklistCategory.SCHOOLS_CHALLENGES,
+                title = "Dirt Track & Kickstart",
+                subtitle = "Win both Las Venturas Stadium Events",
+                requirement = "Win Dirt Track race on Mon/Wed/Fri (BF-400) and score 26+ points in Kickstart trials on other days.",
+                rewardUnlocked = "BF Injection & Dune buggies spawned outside stadium + $35,000 total cash.",
+                location = "Blackfield Stadium, Las Venturas.",
+                proTip = "In Kickstart, grab the green 3-point halos on high pipes first before time runs down."
+            ),
+            GenericChecklistItem(
+                id = "chal_bmx_nrg",
+                category = ChecklistCategory.SCHOOLS_CHALLENGES,
+                title = "BMX & NRG-500 Challenges",
+                subtitle = "Collect all Halos in Glen Park & SF Docks",
+                requirement = "Collect all 19 coronas in Glen Park halfpipe and all 18 coronas in San Fierro dry dock.",
+                rewardUnlocked = "Full Max Cycling & Bike Skill + Credit towards 100% completion.",
+                location = "BMX at Glen Park, Los Santos / NRG-500 at Esplanade North Dry Dock, San Fierro.",
+                proTip = "Reach 100% Cycling skill first to jump high enough for the upper Glen Park halos."
+            ),
+            GenericChecklistItem(
+                id = "chal_chiliad",
+                category = ChecklistCategory.SCHOOLS_CHALLENGES,
+                title = "The Chiliad Challenge",
+                subtitle = "Win 3 Downhill Mountain Bike Races",
+                requirement = "Win Scotchguard Route, Birdseye Winder, and Cobra Run on mountain bikes between 07:00 and 18:00.",
+                rewardUnlocked = "100% Cycling skill + Completion credit towards 100% stat.",
+                location = "Summit of Mount Chiliad, Whetstone County.",
+                proTip = "Knock opponents off their bikes at the starting gate. Take corners wide to avoid falling off cliffs."
+            ),
+            GenericChecklistItem(
+                id = "chal_gyms_range",
+                category = ChecklistCategory.SCHOOLS_CHALLENGES,
+                title = "Gyms & Shooting Range",
+                subtitle = "Defeat 3 Gym Leaders & Pass Ammu-Nation Range",
+                requirement = "Learn Boxing (LS), Martial Arts (SF), Kickboxing (LV) + Pass 4 Ammu-Nation weapon target stages.",
+                rewardUnlocked = "Fast weapon reload times + All 3 CJ melee combat combos unlocked.",
+                location = "Ganton Gym (LS), Cobra Martial Arts (SF), Below the Belt (LV), Ammu-Nation with range.",
+                proTip = "Maintain high muscle stat to enter sparring matches with gym senseis."
+            ),
+
+            // Assets & Safehouses
+            GenericChecklistItem(
+                id = "asset_wang_cars",
+                category = ChecklistCategory.ASSETS_PROPERTIES,
+                title = "Wang Cars Showroom & Import/Export",
+                subtitle = "Acquire Showroom + Complete 3 Export Boards",
+                requirement = "Complete Cesar's showroom heist missions (Zeroing In, Test Drive, Customs Fast Track, Puncture Wounds) + Deliver all 30 export cars to the ship.",
+                rewardUnlocked = "Wang Cars generates $8,000/day cash asset + Import access to all 30 vehicles on demand.",
+                location = "Doherty, San Fierro & Easter Basin Naval Docks export crane.",
+                proTip = "Use the magnetic crane carefully to lower vehicles without scratching them to keep max bonus payout."
+            ),
+            GenericChecklistItem(
+                id = "asset_zeros_rc",
+                category = ChecklistCategory.ASSETS_PROPERTIES,
+                title = "Zero's RC Shop Missions",
+                subtitle = "Complete Air Raid, Supply Lines & New Model Army",
+                requirement = "Defend Zero's transmitters against RC Barons, destroy Berkeley's vans, and win the RC Bandit tank war.",
+                rewardUnlocked = "Zero's RC Shop generates $5,000/day cash asset.",
+                location = "Garcia, San Fierro (Zero's RC Shop).",
+                proTip = "In Supply Lines, glide without full throttle to conserve fuel. Land on van roofs to shoot point-blank."
+            ),
+            GenericChecklistItem(
+                id = "asset_airstrip",
+                category = ChecklistCategory.ASSETS_PROPERTIES,
+                title = "Verdant Meadows Airstrip",
+                subtitle = "Purchase Airstrip & Complete Toreno Missions",
+                requirement = "Buy graveyard airstrip ($80,000) and complete Monster, Highjack, Interdiction, and Green Goo missions.",
+                rewardUnlocked = "Airstrip generates $10,000/day cash asset + Jetpack & Leviathan helicopter permanently spawn.",
+                location = "Verdant Meadows, Bone County desert.",
+                proTip = "The Jetpack spawns next to the airstrip save trailer forever after Green Goo is finished."
+            ),
+            GenericChecklistItem(
+                id = "asset_quarry_valet",
+                category = ChecklistCategory.ASSETS_PROPERTIES,
+                title = "Hunter Quarry & Valet Parking",
+                subtitle = "Complete 7 Quarry Missions & Level 5 Valet",
+                requirement = "Complete all 7 heavy machinery missions in the quarry + Complete 5 levels of valet parking in uniform.",
+                rewardUnlocked = "Hunter Quarry generates $2,000/day + 555 We Tip Hotel generates $2,000/day.",
+                location = "Hunter Quarry (Bone County) & 555 We Tip Hotel (Financial, San Fierro).",
+                proTip = "Wear Valet Uniform (unlocked in 555 We Tip story mission) to start valet duties."
+            ),
+            GenericChecklistItem(
+                id = "prop_all_safehouses",
+                category = ChecklistCategory.ASSETS_PROPERTIES,
+                title = "Purchase All 29 Safehouses",
+                subtitle = "Own every Hotel, Apartment & Mansion in SA",
+                requirement = "Buy all safehouses marked with green house icons across Los Santos, Badlands, San Fierro, Desert & Las Venturas.",
+                rewardUnlocked = "29 Save locations & garages across San Andreas + Crucial credit towards 100% completion.",
+                location = "Spread throughout all 3 cities, Red County, Flint County, and Tierra Robada.",
+                proTip = "Total cost for all safehouses is approx $879,000. Complete Inside Track betting or casino blackjack to fund it."
             )
         )
     }

@@ -15,6 +15,10 @@ val SunsetOrange = Color(0xFFF97316)
 val SanFierroBlue = Color(0xFF38BDF8)
 val WantedRed = Color(0xFFEF4444)
 
+// Semantic Theme aliases
+val SanAndreasGreen = GroveGreen
+val WarningYellow = SunsetGold
+
 // Dark Theme Surfaces (Midnight Asphalt & Gunmetal)
 val MidnightBlack = Color(0xFF0B0F17)
 val DarkSurface = Color(0xFF131A26)

@@ -40,8 +40,8 @@ class MainActivity : ComponentActivity() {
 private enum class NavTab(val title: String, val icon: ImageVector, val tag: String) {
     DOWNLOADS("Download", Icons.Default.Download, "tab_downloads"),
     CHEATS("Cheats", Icons.Default.Key, "tab_cheats"),
+    CHECKLIST("100% Track", Icons.Default.EmojiEvents, "tab_checklist"),
     MISSIONS("Missions", Icons.Default.Assignment, "tab_missions"),
-    COLLECTIBLES("100% Map", Icons.Default.PinDrop, "tab_collectibles"),
     COMPENDIUM("Guide", Icons.Default.MenuBook, "tab_compendium")
 }
 
@@ -67,6 +67,14 @@ fun MainAppScreen(
     val missions by viewModel.missionsList.collectAsStateWithLifecycle()
     val selectedAct by viewModel.selectedMissionAct.collectAsStateWithLifecycle()
     val missionStats by viewModel.missionStats.collectAsStateWithLifecycle()
+
+    // 100% Checklist states
+    val overall100Stats by viewModel.overall100Stats.collectAsStateWithLifecycle()
+    val territories by viewModel.territoriesList.collectAsStateWithLifecycle()
+    val checklistItems by viewModel.checklistItemsList.collectAsStateWithLifecycle()
+    val checklistTab by viewModel.checklistTab.collectAsStateWithLifecycle()
+    val checklistSearch by viewModel.checklistSearchQuery.collectAsStateWithLifecycle()
+    val checklistPendingOnly by viewModel.checklistFilterPendingOnly.collectAsStateWithLifecycle()
 
     // Compendium states
     val selectedCompendiumTab by viewModel.selectedCompendiumTab.collectAsStateWithLifecycle()
@@ -119,13 +127,13 @@ fun MainAppScreen(
                 .fillMaxSize()
                 .padding(bottom = innerPadding.calculateBottomPadding())
         ) {
-            // Prominent Hero Banner shown on the Download screen or compact header on other tabs
+            // Prominent Hero Banner shown on the Download screen, Checklist has its own top bar, others use compact header
             if (selectedTab == 0) {
                 HeroHeader(
                     specs = specs,
                     onNavigateDownloads = { viewModel.selectedBottomTab.value = 0 }
                 )
-            } else {
+            } else if (selectedTab != 2) {
                 TopAppBarCompact(
                     title = NavTab.entries[selectedTab].title,
                     availableGb = specs.availableStorageGb,
@@ -153,21 +161,31 @@ fun MainAppScreen(
                         onSearchQueryChange = { viewModel.cheatSearchQuery.value = it },
                         onToggleFavorite = { viewModel.toggleCheatFavorite(it) }
                     )
-                    2 -> MissionsScreen(
+                    2 -> CompletionChecklistScreen(
+                        stats = overall100Stats,
+                        territories = territories,
+                        missions = missions,
+                        collectibles = collectibles,
+                        checklistItems = checklistItems,
+                        selectedTab = checklistTab,
+                        searchQuery = checklistSearch,
+                        filterPendingOnly = checklistPendingOnly,
+                        onTabSelected = { viewModel.checklistTab.value = it },
+                        onSearchQueryChanged = { viewModel.checklistSearchQuery.value = it },
+                        onFilterPendingChanged = { viewModel.checklistFilterPendingOnly.value = it },
+                        onToggleTerritory = { id, curr -> viewModel.toggleTerritory(id, curr) },
+                        onToggleMission = { id, curr -> viewModel.toggleMission(id, curr) },
+                        onToggleCollectible = { id, curr -> viewModel.toggleCollectible(id, curr) },
+                        onToggleChecklistItem = { id, curr -> viewModel.toggleChecklistItem(id, curr) },
+                        onResetAllProgress = { viewModel.resetEntire100PercentProgress() }
+                    )
+                    3 -> MissionsScreen(
                         missions = missions,
                         selectedAct = selectedAct,
                         onSelectAct = { viewModel.selectedMissionAct.value = it },
                         missionStats = missionStats,
                         onToggleCompleted = { id, curr -> viewModel.toggleMission(id, curr) },
                         onResetMissions = { viewModel.resetAllMissions() }
-                    )
-                    3 -> CollectiblesScreen(
-                        collectibles = collectibles,
-                        selectedType = selectedCollectibleType,
-                        onSelectType = { viewModel.selectedCollectibleType.value = it },
-                        statsMap = collectibleStats,
-                        onToggleCollected = { id, curr -> viewModel.toggleCollectible(id, curr) },
-                        onResetAll = { viewModel.resetAllCollectibles() }
                     )
                     4 -> CompendiumScreen(
                         vehicles = viewModel.vehicles,
